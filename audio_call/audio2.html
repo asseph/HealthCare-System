@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Internet Audio Call</title>
+  </head>
+  <body>
+    <style>
+        #localAudio, #remoteAudio{
+            display:none;
+        }
+    </style>    
+    <h1>Internet Audio Call</h1>
+    <audio id="localAudio" controls autoplay></audio>
+    <audio id="remoteAudio" controls autoplay></audio>
+    <button id="endButton">End Call</button>
+    <script>
+      // Get local audio stream
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then(stream => {
+          // Play local audio stream
+          const localAudio = document.getElementById('localAudio');
+          localAudio.srcObject = stream;
+
+          // Create peer connection
+          const pc = new RTCPeerConnection();
+
+          // Add local audio stream to peer connection
+          stream.getTracks().forEach(track => {
+            pc.addTrack(track, stream);
+          });
+
+          // Set up remote audio playback
+          const remoteAudio = document.getElementById('remoteAudio');
+          pc.ontrack = event => {
+            remoteAudio.srcObject = event.streams[0];
+          };
+
+          // Create offer and set local description
+          pc.createOffer()
+            .then(offer => {
+              return pc.setLocalDescription(offer);
+            })
+            .then(() => {
+              // Send offer to remote peer (via signaling channel)
+              const offer = pc.localDescription;
+              console.log('Offer:', offer);
+              // Use your signaling mechanism here to send the offer to the remote peer
+            })
+            .catch(error => {
+              console.error('Error creating and sending offer:', error);
+            });
+
+          // Handle incoming offer from remote peer (via signaling channel)
+          // Call this function with the received offer as an argument
+          function handleOfferReceived(offer) {
+            pc.setRemoteDescription(offer)
+              .then(() => {
+                // Create answer and set local description
+                return pc.createAnswer();
+              })
+              .then(answer => {
+                return pc.setLocalDescription(answer);
+              })
+              .then(() => {
+                // Send answer to remote peer (via signaling channel)
+                const answer = pc.localDescription;
+                console.log('Answer:', answer);
+                // Use your signaling mechanism here to send the answer to the remote peer
+              })
+              .catch(error => {
+                console.error('Error handling offer:', error);
+              });
+          }
+
+          // Handle incoming answer from remote peer (via signaling channel)
+          // Call this function with the received answer as an argument
+          function handleAnswerReceived(answer) {
+            pc.setRemoteDescription(answer).catch(error => {
+              console.error('Error handling answer:', error);
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error accessing local audio:', error);
+        });
+        endButton.addEventListener('click', () => {
+    // Close the peer connection
+    peerConnection.close();
+    // Stop local media stream tracks
+    localStream.getTracks().forEach(track => track.stop());
+    // Stop remote media stream tracks
+    remoteStream.getTracks().forEach(track => track.stop());
+    // Remove audio elements
+    document.body.removeChild(document.getElementsByTagName('audio')[0]);
+    document.body.removeChild(document.getElementsByTagName('audio')[0]);
+});
+    </script>
+  </body>
+</html>
